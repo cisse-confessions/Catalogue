@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="fr" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cisse Confession | Haute Couture & Sur-Mesure</title>
+    
+    <!-- Tailwind CSS pour le Design Pro -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Alpine.js pour la logique Fullstack Client-Side -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <!-- Icônes -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: { brand: { 900: '#111827', 800: '#1f2937', 500: '#d97706', 100: '#f3f4f6' } }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-brand-100 text-brand-900 font-sans antialiased" x-data="appData()">
+
+    <!-- NOTIFICATIONS TOAST -->
+    <div x-show="toast.show" x-transition class="fixed top-5 right-5 bg-green-600 text-white px-6 py-3 rounded shadow-xl z-[100] flex items-center gap-3">
+        <i class="fas fa-check-circle"></i> <span x-text="toast.message"></span>
+    </div>
+
+    <!-- ==================== ESPACE CLIENT ==================== -->
+    <div x-show="!isAdminView">
+        
+        <!-- Navbar Client -->
+        <header class="bg-white/90 backdrop-blur-md fixed w-full top-0 z-40 border-b border-gray-200 shadow-sm">
+            <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+                <div class="cursor-pointer" @click="window.scrollTo(0,0)">
+                    <h1 class="text-2xl font-bold tracking-widest uppercase text-brand-900">Cisse Confession</h1>
+                    <p class="text-[10px] tracking-widest text-brand-500 italic uppercase">Je suis belle</p>
+                </div>
+                <div class="flex items-center gap-6">
+                    <button @click="cartOpen = true" class="relative text-brand-900 hover:text-brand-500 transition">
+                        <i class="fas fa-shopping-bag text-xl"></i>
+                        <span x-show="cart.length > 0" x-text="cart.length" class="absolute -top-2 -right-2 bg-brand-500 text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full"></span>
+                    </button>
+                    <!-- Bouton secret Admin (Cadenas discret) -->
+                    <button @click="promptAdmin()" class="text-gray-300 hover:text-brand-900 transition" title="Accès Atelier">
+                        <i class="fas fa-lock text-xs"></i>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Hero Section -->
+        <section class="pt-32 pb-12 px-4 text-center">
+            <h2 class="text-3xl md:text-5xl font-serif font-bold mb-4">L'Art de l'Élégance</h2>
+            <p class="text-gray-500 text-sm md:text-base max-w-2xl mx-auto mb-8">Découvrez nos collections pour chaque moment de votre vie.</p>
+            
+            <!-- Filtres par Catégories (Scrollable) -->
+            <div class="flex gap-3 justify-start md:justify-center overflow-x-auto pb-4 max-w-7xl mx-auto px-2 hide-scrollbar">
+                <template x-for="cat in categories" :key="cat">
+                    <button @click="activeCategory = cat" 
+                            class="px-5 py-2 rounded-full text-xs font-bold uppercase tracking-wider whitespace-nowrap transition border"
+                            :class="activeCategory === cat ? 'bg-brand-900 text-white border-brand-900 shadow-md' : 'bg-white text-gray-600 border-gray-300 hover:border-brand-900'">
+                        <span x-text="cat"></span>
+                    </button>
+                </template>
+            </div>
+        </section>
+
+        <!-- Catalogue Grid -->
+        <main class="max-w-7xl mx-auto px-4 pb-24">
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                <template x-for="product in filteredProducts()" :key="product.id">
+                    <div class="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition group relative flex flex-col">
+                        <div class="h-80 relative overflow-hidden bg-gray-100">
+                            <img :src="product.image" :alt="product.title" class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
+                            <span class="absolute top-3 left-3 bg-white/90 text-[9px] font-bold uppercase px-2 py-1 rounded text-brand-900" x-text="product.category"></span>
+                        </div>
+                        <div class="p-5 flex flex-col flex-grow">
+                            <h3 class="font-bold text-lg mb-1" x-text="product.title"></h3>
+                            <p class="text-gray-500 text-xs mb-4 flex-grow line-clamp-2" x-text="product.description"></p>
+                            <button @click="addToCart(product)" class="w-full bg-brand-100 text-brand-900 hover:bg-brand-900 hover:text-white py-2.5 rounded text-xs font-bold uppercase transition flex items-center justify-center gap-2">
+                                <i class="fas fa-plus"></i> Au panier
+                            </button>
+                        </div>
+                    </div>
+                </template>
+                <div x-show="filteredProducts().length === 0" class="col-span-full py-20 text-center text-gray-400">
+                    <i class="fas fa-box-open text-4xl mb-3"></i>
+                    <p>Aucun modèle dans cette catégorie pour le moment.</p>
+                </div>
+            </div>
+        </main>
+
+        <!-- Localisation & Map -->
+        <section class="bg-white border-t border-gray-200 py-16 px-4">
+            <div class="max-w-4xl mx-auto text-center">
+                <h3 class="text-2xl font-serif font-bold mb-4">Visitez Notre Atelier</h3>
+                <p class="text-gray-600 text-sm mb-8">Nous sommes situés à Abidjan. Venez découvrir nos tissus et prendre vos mesures sur place.</p>
+                <a href="https://maps.app.goo.gl/DLvRgy3akVxrXjcbA?g_st=ic" target="_blank" class="inline-flex items-center gap-3 bg-brand-900 text-white px-8 py-4 rounded-lg font-bold shadow-lg hover:bg-brand-800 transition">
+                    <i class="fas fa-map-marker-alt text-brand-500 text-xl"></i>
+                    Ouvrir avec Google Maps
+                </a>
+            </div>
+        </section>
+
+    </div>
+
+    <!-- ==================== PANIER MODAL ==================== -->
+    <div x-show="cartOpen" class="fixed inset-0 bg-brand-900/50 backdrop-blur-sm z-50 flex justify-end" x-cloak>
+        <div class="bg-white w-full max-w-md h-full flex flex-col shadow-2xl" @click.away="cartOpen = false" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="translate-x-full" x-transition:enter-end="translate-x-0">
+            <div class="p-6 border-b flex justify-between items-center">
+                <h2 class="text-xl font-bold">Votre Sélection (<span x-text="cart.length"></span>)</h2>
+                <button @click="cartOpen = false" class="text-gray-400 hover:text-black"><i class="fas fa-times text-xl"></i></button>
+            </div>
+            
+            <div class="p-6 flex-grow overflow-y-auto space-y-4">
+                <template x-for="(item, index) in cart" :key="index">
+                    <div class="flex gap-4 items-center bg-gray-50 p-3 rounded">
+                        <img :src="item.image" class="w-16 h-16 object-cover rounded">
+                        <div class="flex-grow">
+                            <h4 class="text-sm font-bold" x-text="item.title"></h4>
+                            <p class="text-xs text-gray-500" x-text="item.category"></p>
+                        </div>
+                        <button @click="removeFromCart(index)" class="text-red-500 hover:bg-red-50 p-2 rounded"><i class="fas fa-trash"></i></button>
+                    </div>
+                </template>
+                <div x-show="cart.length === 0" class="text-center py-10 text-gray-400">
+                    Votre panier est vide.
+                </div>
+            </div>
+
+            <!-- Actions du Panier -->
+            <div class="p-6 border-t bg-gray-50 space-y-3" x-show="cart.length > 0">
+                <button @click="checkoutWhatsApp()" class="w-full bg-[#25D366] text-white py-3 rounded-lg font-bold flex items-center justify-center gap-2 hover:bg-[#1EBE5D] transition">
+                    <i class="fab fa-whatsapp text-xl"></i> Commander via WhatsApp
+                </button>
+                <a href="tel:+2250709944177" class="w-full border-2 border-brand-900 text-brand-900 py-3 rounded-lg font-bold flex items-center justify-center gap-2 hover:bg-brand-900 hover:text-white transition block text-center">
+                    <i class="fas fa-phone-alt"></i> Appeler l'Atelier
+                </a>
+                <p class="text-[10px] text-center text-gray-500 mt-2">Un conseiller vous répondra pour confirmer les mesures et les prix.</p>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ==================== ESPACE ADMIN (PLATEFORME SÉCURISÉE) ==================== -->
+    <div x-show="isAdminView" class="min-h-screen bg-gray-100" x-cloak>
+        <header class="bg-brand-900 text-white p-4 flex justify-between items-center shadow">
+            <div class="flex items-center gap-3">
+                <i class="fas fa-cogs text-xl text-brand-500"></i>
+                <h1 class="text-lg font-bold">Cisse Confession | Tableau de bord</h1>
+            </div>
+            <button @click="logoutAdmin()" class="bg-red-500 hover:bg-red-600 px-4 py-1.5 rounded text-sm font-bold"><i class="fas fa-sign-out-alt"></i> Quitter</button>
+        </header>
+
+        <div class="max-w-5xl mx-auto p-6 grid grid-cols-1 md:grid-cols-3 gap-8">
+            <!-- Formulaire d'ajout -->
+            <div class="md:col-span-1 bg-white p-6 rounded-xl shadow-sm border h-max">
+                <h2 class="font-bold text-lg mb-4 border-b pb-2"><i class="fas fa-plus-circle text-brand-500"></i> Ajouter un Modèle</h2>
+                <form @submit.prevent="saveProduct" class="space-y-4 text-sm">
+                    <div>
+                        <label class="block font-bold mb-1 text-gray-700">Titre du modèle</label>
+                        <input type="text" x-model="newProduct.title" required class="w-full border rounded p-2 focus:border-brand-900 outline-none">
+                    </div>
+                    <div>
+                        <label class="block font-bold mb-1 text-gray-700">Catégorie / Thème</label>
+                        <select x-model="newProduct.category" required class="w-full border rounded p-2 focus:border-brand-900 outline-none">
+                            <template x-for="cat in categories.filter(c => c !== 'Toutes')" :key="cat">
+                                <option :value="cat" x-text="cat"></option>
+                            </select>
+                    </div>
+                    <div>
+                        <label class="block font-bold mb-1 text-gray-700">Lien de la photo (URL)</label>
+                        <input type="url" x-model="newProduct.image" placeholder="https://..." required class="w-full border rounded p-2 focus:border-brand-900 outline-none">
+                        <p class="text-[10px] text-gray-400 mt-1">Collez l'adresse d'une image (Instagram, Pinterest, Google Photos...)</p>
+                    </div>
+                    <div>
+                        <label class="block font-bold mb-1 text-gray-700">Description</label>
+                        <textarea x-model="newProduct.description" rows="3" required class="w-full border rounded p-2 focus:border-brand-900 outline-none"></textarea>
+                    </div>
+                    <button type="submit" class="w-full bg-brand-900 text-white font-bold py-2.5 rounded shadow hover:bg-brand-800">Enregistrer dans le catalogue</button>
+                </form>
+            </div>
+
+            <!-- Gestion de la Base de données locale -->
+            <div class="md:col-span-2 bg-white p-6 rounded-xl shadow-sm border">
+                <h2 class="font-bold text-lg mb-4 border-b pb-2"><i class="fas fa-database text-brand-500"></i> Vos modèles en ligne (<span x-text="products.length"></span>)</h2>
+                <div class="overflow-y-auto max-h-[600px] space-y-3 pr-2">
+                    <template x-for="product in products" :key="product.id">
+                        <div class="flex gap-4 items-center bg-gray-50 border p-3 rounded-lg">
+                            <img :src="product.image" class="w-16 h-16 object-cover rounded bg-gray-200">
+                            <div class="flex-grow">
+                                <h4 class="font-bold text-sm" x-text="product.title"></h4>
+                                <div class="flex gap-2 text-[10px] uppercase font-bold mt-1">
+                                    <span class="bg-brand-100 text-brand-900 px-2 py-0.5 rounded" x-text="product.category"></span>
+                                </div>
+                            </div>
+                            <button @click="deleteProduct(product.id)" class="text-red-500 hover:bg-red-100 p-2.5 rounded-lg transition" title="Supprimer">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </div>
+                    </template>
+                    <div x-show="products.length === 0" class="text-center py-10 text-gray-400">Aucun modèle. Ajoutez-en un !</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- LOGIQUE JAVASCRIPT (SaaS Architecture) -->
+    <script>
+        function appData() {
+            return {
+                // Configurations
+                adminPassword: "cisse1516@",
+                phoneNumber: "2250709944177",
+                categories: ["Toutes", "Soirée", "Sortie", "Femme Enceinte", "Hommes", "Dames", "Enfants", "Tabaski", "Ramadan", "Pâques", "Noël", "Fin d'année", "Rentrée Scolaire"],
+                
+                // États
+                activeCategory: "Toutes",
+                cartOpen: false,
+                isAdminView: false,
+                cart: [],
+                products: [],
+                
+                // Formulaire Admin
+                newProduct: { title: '', category: 'Soirée', image: '', description: '' },
+                
+                // Toast
+                toast: { show: false, message: '' },
+
+                init() {
+                    // Chargement de la base de données depuis la mémoire locale du navigateur
+                    const savedProducts = localStorage.getItem('cisse_products');
+                    if (savedProducts) {
+                        this.products = JSON.parse(savedProducts);
+                    } else {
+                        // Modèles par défaut pour la démo
+                        this.products = [
+                            { id: 1, title: "Robe Majestueuse", category: "Soirée", image: "https://images.unsplash.com/photo-1566174053879-31528523f8ae?w=500", description: "Idéal pour briller." },
+                            { id: 2, title: "Boubou Bazin Riche", category: "Tabaski", image: "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=500", description: "Broderie artisanale." }
+                        ];
+                        this.saveToDB();
+                    }
+                },
+
+                filteredProducts() {
+                    if (this.activeCategory === "Toutes") return this.products;
+                    return this.products.filter(p => p.category === this.activeCategory);
+                },
+
+                // === GESTION PANIER & COMMANDE ===
+                addToCart(product) {
+                    this.cart.push(product);
+                    this.showToast("Modèle ajouté au panier !");
+                },
+                removeFromCart(index) {
+                    this.cart.splice(index, 1);
+                },
+                checkoutWhatsApp() {
+                    if(this.cart.length === 0) return;
+                    let text = `Bonjour l'Atelier Cisse Confession, je souhaite commander ou prendre rendez-vous pour ces modèles :\n\n`;
+                    this.cart.forEach((item, i) => {
+                        text += `${i+1}. ${item.title} (${item.category})\n`;
+                    });
+                    text += `\nMon email: youssoufcissearapha@gmail.com (à confirmer)`;
+                    const url = `https://wa.me/${this.phoneNumber}?text=${encodeURIComponent(text)}`;
+                    window.open(url, '_blank');
+                },
+
+                // === ESPACE ADMIN ===
+                promptAdmin() {
+                    const pwd = prompt("Accès sécurisé Atelier. Entrez le code administrateur :");
+                    if (pwd === this.adminPassword) {
+                        this.isAdminView = true;
+                        this.showToast("Bienvenue dans votre interface de gestion.");
+                    } else if (pwd !== null) {
+                        alert("Code incorrect.");
+                    }
+                },
+                logoutAdmin() {
+                    this.isAdminView = false;
+                    window.scrollTo(0,0);
+                },
+                saveProduct() {
+                    const product = { ...this.newProduct, id: Date.now() };
+                    this.products.unshift(product);
+                    this.saveToDB();
+                    this.newProduct = { title: '', category: 'Soirée', image: '', description: '' };
+                    this.showToast("Nouveau modèle publié avec succès !");
+                },
+                deleteProduct(id) {
+                    if(confirm("Supprimer ce modèle définitivement ?")) {
+                        this.products = this.products.filter(p => p.id !== id);
+                        this.saveToDB();
+                    }
+                },
+                saveToDB() {
+                    // Sauvegarde dans la mémoire du navigateur
+                    localStorage.setItem('cisse_products', JSON.stringify(this.products));
+                },
+
+                showToast(msg) {
+                    this.toast.message = msg;
+                    this.toast.show = true;
+                    setTimeout(() => this.toast.show = false, 3000);
+                }
+            }
+        }
+    </script>
+</body>
+</html>
